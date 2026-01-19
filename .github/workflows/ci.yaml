@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
     branches: [main]
 
@@ -26,6 +27,17 @@ jobs:
       - name: Push to GHCR
         run: |
           docker tag docker-ap-ci:${{ github.sha }} ghcr.io/${{ github.repository }}:${{ github.sha }}
-          docker tag docker-ap-ci:${{ github.sha }} ghcr.io/${{ github.repository }}:latest
           docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
-          docker push ghcr.io/${{ github.repository }}:latest
+
+          # mainブランチの場合はlatestタグも付ける
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            docker tag docker-ap-ci:${{ github.sha }} ghcr.io/${{ github.repository }}:latest
+            docker push ghcr.io/${{ github.repository }}:latest
+          fi
+          
+          # タグの場合はバージョンタグを付ける（例: v1.0.0）
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+            docker tag docker-ap-ci:${{ github.sha }} ghcr.io/${{ github.repository }}:${VERSION}
+            docker push ghcr.io/${{ github.repository }}:${VERSION}
+          fi

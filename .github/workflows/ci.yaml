@@ -41,3 +41,20 @@ jobs:
             docker tag docker-ap-ci:${{ github.sha }} ghcr.io/${{ github.repository }}:${VERSION}
             docker push ghcr.io/${{ github.repository }}:${VERSION}
           fi
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: docker-ap-ci
+          image: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          region: asia-northeast1
+          flags: --allow-unauthenticated --port=8080
